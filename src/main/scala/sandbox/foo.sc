@@ -7,34 +7,34 @@ import $ivy.`org.typelevel::simulacrum:1.0.0`
 import cats.kernel.Semigroup
 import cats.syntax.all._
 
-object `check as function` {
+// object `check as function` {
 
-  case class CheckF[A, E](f: A => Either[E, A]) {
-    def apply(value: A): Either[E, A] = f(value)
+//   case class CheckF[A, E](f: A => Either[E, A]) {
+//     def apply(value: A): Either[E, A] = f(value)
 
-    def and(that: CheckF[A, E])(implicit E: Semigroup[E]): CheckF[A, E] =
-      CheckF(
-        (a: A) =>
-          (this(a), that(a)) match {
-            case (Right(_), Right(_)) => Right(a)
-            case (Left(e), Right(_))  => e.asLeft[A]
-            case (Right(_), Left(e))  => e.asLeft[A]
-            case (Left(e1), Left(e2)) => (e1 |+| e2).asLeft[A]
-        }
-      )
-  }
+//     def and(that: CheckF[A, E])(implicit E: Semigroup[E]): CheckF[A, E] =
+//       CheckF(
+//         (a: A) =>
+//           (this(a), that(a)) match {
+//             case (Right(_), Right(_)) => Right(a)
+//             case (Left(e), Right(_))  => e.asLeft[A]
+//             case (Right(_), Left(e))  => e.asLeft[A]
+//             case (Left(e1), Left(e2)) => (e1 |+| e2).asLeft[A]
+//         }
+//       )
+//   }
 
-}
+// }
 
 object `check as ADT` {
   import Check.{And, Pure}
-  trait Check[A, E] {
+  trait Check[E, A] {
     def apply(value: A)(implicit E: Semigroup[E]): Either[E, A] =
       this match {
         case Pure(f) => f(value)
         case And(c1, c2) =>
           (c1(value), c2(value)) match {
-            case (Right(_), Right(_)) => Right(value)
+            case (Right(_), Right(_)) => value.asRight[E]
             case (Left(e), Right(_))  => e.asLeft[A]
             case (Right(_), Left(e))  => e.asLeft[A]
             case (Left(e1), Left(e2)) => (e1 |+| e2).asLeft[A]
@@ -44,11 +44,11 @@ object `check as ADT` {
   }
 
   object Check {
-    final case class Pure[A, E](f: A => Either[E, A]) extends Check[A, E]
-    final case class And[A, E](c1: Check[A, E], c2: Check[A, E])
-        extends Check[A, E]
-    final case class Or[A, E](c1: Check[A, E], c2: Check[A, E])
-        extends Check[A, E]
+    final case class Pure[E, A](f: A => Either[E, A]) extends Check[E, A]
+    final case class And[E, A](c1: Check[E, A], c2: Check[E, A])
+        extends Check[E, A]
+    final case class Or[E, A](c1: Check[E, A], c2: Check[E, A])
+        extends Check[E, A]
   }
 
 }
